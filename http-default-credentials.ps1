@@ -11,14 +11,20 @@ Param(
     
     # fingerprint file
     [parameter(Mandatory=$false)]
+    [ValidateScript({Test-Path $_})]
     [String]$FingerprintFile = "",
     
     # Specific TCP ports
     [parameter(Mandatory=$false)]
+    [ValidateRange(0,65535)]
     [int[]]$Ports = @(80,443,631,7080,8000,8080,8088,8180,8443,5800,3872),
 
+    # TCP port range
+    [parameter(Mandatory=$false)]
+    [String]$PortRange ="",
+
     # Delete the raw reports from the scans (located in %temp%)
-    [Parameter(Mandatory=$false)]
+    [parameter(Mandatory=$false)]
     [Boolean]
     $DeleteOrgXmlReports = $true
     )
@@ -131,3 +137,10 @@ Param(
     }
 
 }
+
+Function PrivateFunc(){
+    Write-Host "This is some private shit!"
+}
+
+#FunctionsToExport = '*-*'
+
