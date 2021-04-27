@@ -90,7 +90,8 @@ Param(
                 if(!$AddressNode){
                     continue
                 }
-                    $PortNode = $HostNode.SelectSingleNode("ports/port")
+                $PortNodes = $HostNode.SelectNodes("ports/port")
+                foreach ($PortNode in $PortNodes) {
                     $Service = New-Object psobject ;
                     $Service | Add-Member -MemberType NoteProperty -Name Host -Value $AddressNode.addr
                     $Service | Add-Member -MemberType NoteProperty -Name Proto -Value $PortNode.protocol
@@ -98,27 +99,28 @@ Param(
                     $Service | Add-Member -MemberType NoteProperty -Name State -Value $PortNode.state.state
                     $Service | Add-Member -MemberType NoteProperty -Name Service -Value ("$($PortNode.service.name) $($PortNode.service.tunnel)")
                     $Service | Add-Member -MemberType NoteProperty -Name ServiceDescription -Value ("$($PortNode.service.product) $($PortNode.service.version) $($PortNode.service.extrainfo)")
-                
-                # Reading found credentials
-                $Credentials = @()
-                $CredentialElements = $PortNode.SelectNodes("script[@id='http-default-accounts']/table/table[@key='credentials']/table")
-                $CredentialElements | ForEach-Object { 
-                    $Password = $_.SelectSingleNode("elem[@key='password']")."#text"
-                    $Username = $_.SelectSingleNode("elem[@key='username']")."#text"
-                    $Credentials += "$($Username):$($Password)"
-                }
-                $Service | Add-Member -MemberType NoteProperty -Name Credentials -Value $Credentials
+                     # Reading found credentials
+                    $Credentials = @()
+                    $CredentialElements = $PortNode.SelectNodes("script[@id='http-default-accounts']/table/table[@key='credentials']/table")
+                    $CredentialElements | ForEach-Object { 
+                        $Password = $_.SelectSingleNode("elem[@key='password']")."#text"
+                        $Username = $_.SelectSingleNode("elem[@key='username']")."#text"
+                        $Credentials += "$($Username):$($Password)"
+                    }
+                    $Service | Add-Member -MemberType NoteProperty -Name Credentials -Value $Credentials
             
-                # Reading found paths 
-                $Paths = @()
-                $PathElements = $PortNode.SelectNodes("script[@id='http-default-accounts']/table/elem[@key='path']") 
-                $PathElements | ForEach-Object {
-                    $Paths += $_."#text"
-                }
-                $Service | Add-Member -MemberType NoteProperty -Name Paths -Value $Paths
+                    # Reading found paths 
+                    $Paths = @()
+                    $PathElements = $PortNode.SelectNodes("script[@id='http-default-accounts']/table/elem[@key='path']") 
+                    $PathElements | ForEach-Object {
+                        $Paths += $_."#text"
+                    }
+                    $Service | Add-Member -MemberType NoteProperty -Name Paths -Value $Paths
     
-                if (($Service.proto -ne "") -and ($Service.state -ne "closed")) {
-                    $Services += $Service
+                    if (($Service.proto -ne "") -and ($Service.state -ne "closed")) {
+                        $Services += $Service
+                    }
+
                 }
             }
         }
