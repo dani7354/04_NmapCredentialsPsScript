@@ -13,15 +13,14 @@ Param(
     [parameter(Mandatory=$false)]
     [String]$FingerprintFile = "",
     
-    # TCP ports
+    # Specific TCP ports
     [parameter(Mandatory=$false)]
-    [int[]]$Ports = @(80,443),
-    
+    [int[]]$Ports = @(80,443,631,7080,8000,8080,8088,8180,8443,5800,3872),
+
     # Delete the raw reports from the scans (located in %temp%)
     [Parameter(Mandatory=$false)]
     [Boolean]
     $DeleteOrgXmlReports = $true
-    
     )
     
     $BaseLocation = $env:TEMP
