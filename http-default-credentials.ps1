@@ -52,9 +52,14 @@ Param(
        Remove-Item -Recurse $ExistingFolder 
     }
     New-Item -Path $TempDir -ItemType Directory > $null
-    
-    # Perform credential scan separately on the specified ports
-    if($Ports.Length -gt 0){
+
+    if($PortRange -ne ""){
+        $TempOutFile = "$($TempXmlBaseName)_ports$($PortRange).xml"
+        Write-Host "Performing scan and default credentials check on host(s) $($IPScope) TCP ports $($PortRange)"
+
+        & $NmapExe -sV --script http-default-accounts.nse -p $PortRange $IPScope -oX  "$($TempDir)\$($TempOutFile)" > $null
+    }
+    else {  # Perform credential scan separately on the specified ports
         foreach ($Port in $Ports) {
             try {
                 if(($Port -lt 65536)  -and ($Port -gt 0)){ 
@@ -69,9 +74,6 @@ Param(
                 continue 
             }
         }
-    }
-    else {
-        Write-Host "No ports specified - QUITTIG!"
     }
     
     # Read the generated XML reports
@@ -102,7 +104,7 @@ Param(
                 $CredentialElements = $PortNode.SelectNodes("script[@id='http-default-accounts']/table/table[@key='credentials']/table")
                 $CredentialElements | ForEach-Object { 
                     $Password = $_.SelectSingleNode("elem[@key='password']")."#text"
-                    $Username = $_.SelectSingleNode("elem[@key='password']")."#text"
+                    $Username = $_.SelectSingleNode("elem[@key='username']")."#text"
                     $Credentials += "$($Username):$($Password)"
                 }
                 $Service | Add-Member -MemberType NoteProperty -Name Credentials -Value $Credentials
@@ -136,8 +138,4 @@ Param(
             Write-Host "Nmap XML reports are located in $($TempDir)"
         }
     }
-
 }
-
-#FunctionsToExport = '*-*'
-
