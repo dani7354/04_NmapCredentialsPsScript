@@ -21,6 +21,7 @@ Param(
 
     # TCP port range
     [parameter(Mandatory=$false)]
+    [ValidateScript({ $_ -match "^[0-9]+-[0-9]+$" -and (([int]$_.Split('-')[0] -gt -1 -and [int]$_.Split('-')[0] -lt 65536) -and  ([int]$_.Split('-')[1] -gt 0 -and [int]$_.Split('-')[1] -lt 65536) -and [int]$_.Split('-')[0] -lt [int]$_.Split('-')[1]) })]
     [String]$PortRange ="",
 
     # Delete the raw reports from the scans (located in %temp%)
@@ -136,10 +137,6 @@ Param(
         }
     }
 
-}
-
-Function PrivateFunc(){
-    Write-Host "This is some private shit!"
 }
 
 #FunctionsToExport = '*-*'
