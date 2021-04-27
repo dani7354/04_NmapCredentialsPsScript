@@ -1,4 +1,5 @@
-
+Function Find-Http-Credentials()
+{
 Param(
     #IP scope
     [parameter(Mandatory)]
@@ -129,3 +130,5 @@ Param(
             Write-Host "Nmap XML reports are located in $($TempDir)"
         }
     }
+
+}
