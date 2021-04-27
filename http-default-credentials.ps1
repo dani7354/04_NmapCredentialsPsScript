@@ -124,7 +124,7 @@ Param(
                 }
             }
         }
-        $Services | Sort-Object -Property Host
+        $Services | Sort-Object -Property Host | Format-Table -AutoSize
     }
     catch {
         Write-Host "Something went wrong while reading XML file(s)"
