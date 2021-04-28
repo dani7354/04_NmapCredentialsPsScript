@@ -13,7 +13,13 @@ Param(
     [parameter(Mandatory=$false)]
     [ValidateScript({Test-Path $_})]
     [String]$FingerprintFile = "",
-    
+
+    # Nmap scan timing option. Default: T3, Most aggressive: T5, Most paranoid: T0 see https://nmap.org/book/man-performance.html for details
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("T0", "T1", "T2", "T3", "T4", "T5")]
+    [String]
+    $ScanTime = "T3",
+
     # Specific TCP ports
     [parameter(Mandatory=$false)]
     [ValidateRange(0,65535)]
@@ -66,7 +72,7 @@ Param(
                     $TempOutFile = "$($TempXmlBaseName)_port$($Port).xml" 
                     Write-Host "Performing default credentials check on hosts $($IPScope) TCP port $($Port)"
                     
-                    & $NmapExe -sV --script http-default-accounts.nse -p $Port $IPScope -oX  "$($TempDir)\$($TempOutFile)" > $null
+                    & $NmapExe -sV --script http-default-accounts.nse -p $Port $IPScope -oX  "$($TempDir)\$($TempOutFile)" -"$($ScanTime)" > $null
                 }
             }
             catch {
