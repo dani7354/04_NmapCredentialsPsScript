@@ -3,7 +3,7 @@ Function Find-Http-Credentials()
 Param(
     #IP scope
     [parameter(Mandatory)]
-    [String]$IPScope, 
+    [String]$HostRange, 
     
     #Output file
     [parameter(Mandatory)]
@@ -22,6 +22,7 @@ Param(
 
     # TCP port range
     [parameter(Mandatory=$false)]
+    [ValidateScript({$_ -ne ""})]
     [String]$PortRange ="80,443",
 
     # Delete the raw reports from the scans (located in %temp%)
@@ -42,7 +43,7 @@ Param(
     }
     
     # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
-    $TempXmlBaseName = $IPScope.Replace('/', '_').Replace('.', '_')
+    $TempXmlBaseName = $HostRange.Replace('/', '_').Replace('.', '_')
     
     # Folder for temporary generated XML scan reports
     $TempDir = "$($BaseLocation)\nmap-temp-"
@@ -57,9 +58,9 @@ Param(
     # Discover hosts, services and try out default credentials.
     if($PortRange -ne ""){
         $TempOutFile = "$($TempXmlBaseName)_ports$($PortRange).xml"
-        Write-Host "Performing scan and default credentials check on host(s) $($IPScope) TCP ports $($PortRange)"
+        Write-Host "Performing scan and default credentials check on host(s) $($HostRange) TCP ports $($PortRange)"
 
-        & $NmapExe -sV --script http-default-accounts.nse -p $PortRange $IPScope -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+        & $NmapExe -sV --script http-default-accounts.nse -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
     }
     
     # Read the generated XML reports
@@ -110,7 +111,13 @@ Param(
                 }
             }
         }
-        $Services | Sort-Object -Property Host | Format-Table -AutoSize
+        if($Services.Length -gt 0){
+            $Services | Sort-Object -Property Host | Format-Table -AutoSize
+        }
+        else{
+            Write-Host "No services were found!"
+        }
+        
     }
     catch {
         Write-Host "Something went wrong while reading XML file(s)"
