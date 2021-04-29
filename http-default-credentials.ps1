@@ -20,15 +20,9 @@ Param(
     [String]
     $ScanTime = "T3",
 
-    # Specific TCP ports
-    [parameter(Mandatory=$false)]
-    [ValidateRange(0,65535)]
-    [int[]]$Ports = @(80,443,631,7080,8000,8080,8088,8180,8443,5800,3872),
-
     # TCP port range
     [parameter(Mandatory=$false)]
-    [ValidateScript({ $_ -match "^[0-9]+-[0-9]+$" -and (([int]$_.Split('-')[0] -gt -1 -and [int]$_.Split('-')[0] -lt 65536) -and  ([int]$_.Split('-')[1] -gt 0 -and [int]$_.Split('-')[1] -lt 65536) -and [int]$_.Split('-')[0] -lt [int]$_.Split('-')[1]) })]
-    [String]$PortRange ="",
+    [String]$PortRange ="80,443",
 
     # Delete the raw reports from the scans (located in %temp%)
     [parameter(Mandatory=$false)]
@@ -59,27 +53,13 @@ Param(
     }
     New-Item -Path $TempDir -ItemType Directory > $null
 
+
+    # Discover hosts, services and try out default credentials.
     if($PortRange -ne ""){
         $TempOutFile = "$($TempXmlBaseName)_ports$($PortRange).xml"
         Write-Host "Performing scan and default credentials check on host(s) $($IPScope) TCP ports $($PortRange)"
 
-        & $NmapExe -sV --script http-default-accounts.nse -p $PortRange $IPScope -oX  "$($TempDir)\$($TempOutFile)" > $null
-    }
-    else {  # Perform credential scan separately on the specified ports
-        foreach ($Port in $Ports) {
-            try {
-                if(($Port -lt 65536)  -and ($Port -gt 0)){ 
-                    $TempOutFile = "$($TempXmlBaseName)_port$($Port).xml" 
-                    Write-Host "Performing default credentials check on hosts $($IPScope) TCP port $($Port)"
-                    
-                    & $NmapExe -sV --script http-default-accounts.nse -p $Port $IPScope -oX  "$($TempDir)\$($TempOutFile)" -"$($ScanTime)" > $null
-                }
-            }
-            catch {
-                Write-Host "Something went wrong while perforing the scan: $($IPScope) : $($Port)!"
-                continue 
-            }
-        }
+        & $NmapExe -sV --script http-default-accounts.nse -p $PortRange $IPScope -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
     }
     
     # Read the generated XML reports
