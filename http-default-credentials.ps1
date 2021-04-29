@@ -1,24 +1,23 @@
 Function Find-Http-Credentials()
 {
 Param(
-    #IP scope
+    # Hosts to scan
     [parameter(Mandatory)]
     [String]$HostRange, 
     
-    #Output file
-    [parameter(Mandatory)]
-    [String]$OutputDir,
+    # Path to CSV file for scan results
+    [parameter(Mandatory=$false)]
+    [String]$Csv = "",
     
-    # fingerprint file
+    # fingerprint file. If none is specified the default fingerprint file will be used
     [parameter(Mandatory=$false)]
     [ValidateScript({Test-Path $_})]
-    [String]$FingerprintFile = "",
+    [String]$Fingerprints = "",
 
     # Nmap scan timing option. Default: T3, Most aggressive: T5, Most paranoid: T0 see https://nmap.org/book/man-performance.html for details
     [Parameter(Mandatory=$false)]
     [ValidateSet("T0", "T1", "T2", "T3", "T4", "T5")]
-    [String]
-    $ScanTime = "T3",
+    [String]$ScanTime = "T3",
 
     # TCP port range
     [parameter(Mandatory=$false)]
@@ -27,8 +26,7 @@ Param(
 
     # Delete the raw reports from the scans (located in %temp%)
     [parameter(Mandatory=$false)]
-    [Boolean]
-    $DeleteOrgXmlReports = $true
+    [Boolean]$DeleteOrgXmlReports = $true
     )
     
     $BaseLocation = $env:TEMP
@@ -54,13 +52,18 @@ Param(
     }
     New-Item -Path $TempDir -ItemType Directory > $null
 
-
     # Discover hosts, services and try out default credentials.
     if($PortRange -ne ""){
         $TempOutFile = "$($TempXmlBaseName)_ports$($PortRange).xml"
         Write-Host "Performing scan and default credentials check on host(s) $($HostRange) TCP ports $($PortRange)"
 
-        & $NmapExe -sV --script http-default-accounts.nse -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+        if($Fingerprints -ne ""){
+            Write-Host "Using alternative fingerprint file: $($Fingerprints)"
+            & $NmapExe -sV --script http-default-accounts.nse  --script-args http-default-accounts.fingerprintfile=$Fingerprints -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+        }
+        else{
+            & $NmapExe -sV --script http-default-accounts.nse -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+        }
     }
     
     # Read the generated XML reports
@@ -107,17 +110,20 @@ Param(
                     if (($Service.proto -ne "") -and ($Service.state -ne "closed")) {
                         $Services += $Service
                     }
-
                 }
             }
         }
+        # Return found services and credentials if any!
         if($Services.Length -gt 0){
-            $Services | Sort-Object -Property Host | Format-Table -AutoSize
+            $ServiceSorted = $Services | Sort-Object -Property Host
+            if($Csv -ne ""){
+                $ServiceSorted | Export-Csv -Path $Csv -Delimiter ";"
+            }
+            $ServiceSorted | Format-Table -AutoSize
         }
         else{
             Write-Host "No services were found!"
         }
-        
     }
     catch {
         Write-Host "Something went wrong while reading XML file(s)"
