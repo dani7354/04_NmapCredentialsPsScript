@@ -13,6 +13,20 @@ Function GetNmapLocation()
     $NmapExe
 }
 
+Function CreateTemporaryDirectory()
+{
+    $TempDir = "$($BaseLocation)\nmap-temp-"
+    $TempDir += Get-Date -Format "dd-MM-yyyy_HH_mm"
+    $ExistingFolder = Get-Item $TempDir -ErrorAction SilentlyContinue
+
+    if($ExistingFolder){
+       Remove-Item -Recurse $ExistingFolder 
+    }
+
+    New-Item -Path $TempDir -ItemType Directory > $nulla
+    $TempDir
+}
+
 Function GetServicesFromXml()
 {
     Param(
@@ -35,7 +49,7 @@ Function GetServicesFromXml()
 
             # Check for XML node with valid IP address
             $AddressNode = if($Host.SelectSingleNode("address[@addrtype='ipv4']")) { $Host.SelectSingleNode("address[@addrtype='ipv4']") } Else { $Host.SelectSingleNode("address[@addrtype='ipv6']")  }
-            if(!$AddressNode.addr){
+            if(!$AddressNode.addr){ # TODO: check if theres a better way to check false /null 
                 Write-Host "Host skipped!"
                     continue
             }
@@ -75,7 +89,6 @@ Function GetServicesFromXml()
                 $ScriptNode = $Port.SelectSingleNode($NseScriptXPath)
                 if($ScriptNode){
                     Write-Host $ScriptNode.output
-                   # $ScriptOutput = $ScriptNode.output.Replace("\n", "").Replace("\r", "").Replace("&#xa;", "").Replace("\\n", "").Replace("\\r", "")
                    $ScriptOutput = $ScriptNode.output -Replace "`n","" -Replace "`r",""
                     $ServiceObj.NseScriptResult = "[$($ScriptNode.id)]: $($ScriptOutput)"
                 }
@@ -124,13 +137,7 @@ Param(
     $TempXmlBaseName = $HostRange.Replace('/', '_').Replace('.', '_')
     
     # Folder for temporary generated XML scan reports
-    $TempDir = "$($BaseLocation)\nmap-temp-"
-    $TempDir += Get-Date -Format "dd-MM-yyyy_HH_mm"
-    $ExistingFolder = Get-Item $TempDir -ErrorAction SilentlyContinue
-    if($ExistingFolder){
-       Remove-Item -Recurse $ExistingFolder 
-    }
-    New-Item -Path $TempDir -ItemType Directory > $null
+    $TempDir = CreateTemporaryDirectory
 
     # Discover hosts, services and try out default credentials.
     if($PortRange -ne ""){
@@ -147,82 +154,26 @@ Param(
     }
     
     # Read the generated XML reports
-   # try {
+    try {
         $Services = GetServicesFromXml $TempDir
         $Services |Sort-Object -Property "HostIp" |Export-Csv -Path $Csv -Delimiter ";"
         $Services 
-#        $Services = @()
-#        $XmlFiles = Get-ChildItem -Path $TempDir
-#        foreach ($File in $XmlFiles) {
-#            [Xml]$Report = Get-Content -Path "$($TempDir)\$File"
-#           $Hosts = $Report.SelectNodes("//host")
-#            foreach ($HostNode in $Hosts) {
-#                $AddressNode = $HostNode.SelectSingleNode("address[@addrtype='ipv4']")
-#    
-#                # Skip to next host if host is not valid 
-#                if(!$AddressNode){
-#                    continue
-#                }
-#                $PortNodes = $HostNode.SelectNodes("ports/port")
-#                foreach ($PortNode in $PortNodes) {
-#                    $Service = New-Object psobject ;
-#                    $Service | Add-Member -MemberType NoteProperty -Name Host -Value $AddressNode.addr
-#                    $Service | Add-Member -MemberType NoteProperty -Name Proto -Value $PortNode.protocol
-#                    $Service | Add-Member -MemberType NoteProperty -Name Port -Value $PortNode.portid
-#                    $Service | Add-Member -MemberType NoteProperty -Name State -Value $PortNode.state.state
-#                    $Service | Add-Member -MemberType NoteProperty -Name Service -Value ("$($PortNode.service.name) $($PortNode.service.tunnel)")
-#                    $Service | Add-Member -MemberType NoteProperty -Name ServiceDescription -Value ("$($PortNode.service.product) $($PortNode.service.version) $($PortNode.service.extrainfo)")
-#                     # Reading found credentials
-#                    $Credentials = ""
-#                    $CredentialElements = $PortNode.SelectNodes("script[@id='http-default-accounts']/table/table[@key='credentials']/table")
-#                    $CredentialElements | ForEach-Object { 
-#                        $Password = $_.SelectSingleNode("elem[@key='password']")."#text"
-#                        $Username = $_.SelectSingleNode("elem[@key='username']")."#text"
-#                        $Credentials += if($Credentials.Length -eq 0) {"$($Username):$($Password)"} Else {", $($Username):$($Password)"}
-#                    }
-#                    $Service | Add-Member -MemberType NoteProperty -Name Credentials -Value $Credentials
-#            
-#                    # Reading found paths 
-#                    $Paths = ""
-#                    $PathElements = $PortNode.SelectNodes("script[@id='http-default-accounts']/table/elem[@key='path']") 
-#                    $PathElements | ForEach-Object {
-#                        $Paths +=  if ($Paths.Length -eq 0)  {$_."#text"} Else {", " + $_."#text"} 
-#                    }
-#                    $Service | Add-Member -MemberType NoteProperty -Name Paths -Value $Paths
-#    
-#                    if (($Service.proto -ne "") -and ($Service.state -ne "closed")) {
-#                        $Services += $Service
-#                    }
-#                }
-#            }
-#        }
-#        # Return found services and credentials if any!
-#        if($Services.Length -gt 0){
-#            $ServiceSorted = $Services | Sort-Object -Property Host
-#            if($Csv -ne ""){
-#                $ServiceSorted | Export-Csv -Path $Csv -Delimiter ";"
-#            }
-#            $ServiceSorted | Format-Table -AutoSize
-#        }
-#        else{
-#            Write-Host "No services were found!"
-#        }
- #   }
- #   catch {
+    }
+    catch {
 #        Write-Host "Something went wrong while reading XML file(s)"
-#    }
-#    finally{
+    }
+    finally{
 #    
-#        # Delete XML reports
-#        if($DeleteOrgXmlReports){
-#            Write-Host "Removing temporary nmap XML reports located in $($TempDir)"
-#            Remove-Item -Recurse $TempDir
-#        }
-#        else{
-#            Write-Host "Nmap XML reports are located in $($TempDir)"
-#        }
-#    }
-}
+        # Delete XML reports
+        if($DeleteOrgXmlReports){
+            Write-Host "Removing temporary nmap XML reports located in $($TempDir)"
+            Remove-Item -Recurse $TempDir
+        }
+        else{
+            Write-Host "Nmap XML reports are located in $($TempDir)"
+        }
+    }
+
 
 Function Find-FtpServicesWithAnonAuth(){
     Write-Warning "Hello World!"
