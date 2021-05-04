@@ -43,12 +43,15 @@ Function GetServicesFromXml()
         {
             # Check if the host state == up
             if($Host.status.state -ne "up"){
+                Write-Host "Skip host (up)"
                 continue
+
             }
 
             # Check for XML node with valid IP address
             $AddressNode = if($Host.SelectSingleNode("address[@addrtype='ipv4']")) { $Host.SelectSingleNode("address[@addrtype='ipv4']") } Else { $Host.SelectSingleNode("address[@addrtype='ipv6']")  }
             if(!$AddressNode.addr){ # TODO: check if theres a better way to check false /null 
+                Write-Host "Skip host"
                     continue
             }
             
@@ -61,8 +64,7 @@ Function GetServicesFromXml()
             $PortNodes = $Host.SelectNodes("ports/port")
             foreach ($Port in $PortNodes) 
             {
-                if($Port.state -eq "closed"){
-                    Write-Host "Skip"
+                if($Port.state.state -eq "closed"){
                     continue
                 }
                 $ServiceObj = [PSCustomObject]@{
@@ -76,16 +78,13 @@ Function GetServicesFromXml()
                     NseScriptResult = ""
                 }
 
-                $NseScriptXPath = ""
                 switch ($Port.service.name) {
-                    "http" { $NseScriptXPath = "script[@id='http-default-accounts']" }
-                    "ftp" { $NseScriptXPath = "script[@id='ftp-anon']" }
-                    Default {}
+                    "http" { $ScriptNode = $Port.SelectSingleNode("script[@id='http-default-accounts']") }
+                    "ftp" { $ScriptNode = $Port.SelectSingleNode("script[@id='ftp-anon']") }
+                    Default { $ScriptNode = $null }
                 }
 
-                $ScriptNode = $Port.SelectSingleNode($NseScriptXPath)
                 if($ScriptNode){
-                    Write-Host $ScriptNode.output
                    $ScriptOutput = $ScriptNode.output -Replace "`n","" -Replace "`r",""
                     $ServiceObj.NseScriptResult = "[$($ScriptNode.id)]: $($ScriptOutput)"
                 }
@@ -126,12 +125,12 @@ Param(
     [parameter(Mandatory=$false)]
     [Boolean]$DeleteOrgXmlReports = $true
     )
-    
+   try{ 
     # Check for valid path to nmap executable
     $NmapExe = GetNmapLocation
   
     # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
-    $TempXmlBaseName = $HostRange.Replace('/', '_').Replace('.', '_')
+    $TempXmlBaseName = $HostRange.Replace('/', '_').Replace('.', '_').Replace(',', '_')
     
     # Folder for temporary generated XML scan reports
     $TempDir = CreateTemporaryDirectory
@@ -143,24 +142,91 @@ Param(
 
         if($Fingerprints -ne ""){
             Write-Host "Using alternative fingerprint file: $($Fingerprints)"
-            & $NmapExe -sV --script "http-default-accounts.nse, ftp-anon.nse" --script-args http-default-accounts.fingerprintfile=$Fingerprints -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+            & $NmapExe -sV --script "http-default-accounts.nse" --script-args http-default-accounts.fingerprintfile=$Fingerprints -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
         }
         else{
-            & $NmapExe -sV --script "http-default-accounts.nse, ftp-anon.nse" -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+            & $NmapExe -sV --script "http-default-accounts.nse" -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
         }
     }
     
-    # Read the generated XML reports
-    try {
-        $Services = GetServicesFromXml $TempDir
-        $Services |Sort-Object -Property "HostIp" |Export-Csv -Path $Csv -Delimiter ";"
-        $Services 
+        # Read the generated XML reports
+        $Services = GetServicesFromXml -XmlDir $TempDir
+        $ServicesSorted = $Services |Sort-Object -Property "HostIp"
+        if($Csv -ne "" -and $ServicesSorted.Length -gt 0){
+            $ServicesSorted |Export-Csv -Path $Csv -Delimiter ";" 
+        }
+        $ServicesSorted
     }
     catch {
-#        Write-Host "Something went wrong while reading XML file(s)"
+        Write-Error -Message "Something went wrong!" 
     }
     finally{
-#    
+    
+        # Delete XML reports
+        if($DeleteOrgXmlReports){
+            Write-Host "Removing temporary nmap XML reports located in $($TempDir)"
+            Remove-Item -Recurse $TempDir
+        }
+        else{
+            Write-Host "Nmap XML reports are located in $($TempDir)"
+        }
+   }
+}
+
+
+Function Find-FtpServicesWithAnonAuth(){
+# Hosts to scan
+Param(
+    [parameter(Mandatory)]
+    [String]$HostRange, 
+    
+    # Path to CSV file for scan results
+    [parameter(Mandatory=$false)]
+    [String]$Csv = "",
+    
+    # Nmap scan timing option. Default: T3, Most aggressive: T5, Most paranoid: T0 see https://nmap.org/book/man-performance.html for details
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("T0", "T1", "T2", "T3", "T4", "T5")]
+    [String]$ScanTime = "T3",
+
+    # TCP port range
+    [parameter(Mandatory=$false)]
+    [ValidateScript({$_ -ne ""})]
+    [String]$Ports ="21,990,2121",
+
+    # Delete the raw reports from the scans (located in %temp%)
+    [parameter(Mandatory=$false)]
+    [Boolean]$DeleteOrgXmlReports = $true
+    )
+
+    try {
+        # Check for valid path to nmap executable
+        $NmapExe = GetNmapLocation
+  
+        # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
+        $TempXmlBaseName = $HostRange.Replace('/', '_').Replace('.', '_').Replace(',', '_')
+    
+        # Folder for temporary generated XML scan reports
+        $TempDir = CreateTemporaryDirectory
+
+        # Discover hosts, services and try out default credentials.
+        $TempOutFile = "$($TempXmlBaseName)_ports$($Ports).xml"
+        Write-Host "Scanning for services and testing FTP services for anonymous login on host(s) $($HostRange)..."
+
+        & $NmapExe -sV --script "ftp-anon.nse" -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+
+        $Services = GetServicesFromXml -XmlDir $TempDir
+        $ServicesSorted = $Services | Sort-Object -Property "HostIp"
+        if($Csv -ne ""){
+            $ServicesSorted | Export-Csv -Path $Csv -Delimiter ";"
+        }
+        $ServicesSorted
+    }
+    catch {
+        Write-Error -Message "Something went wrong!"
+    }
+    finally{
+    
         # Delete XML reports
         if($DeleteOrgXmlReports){
             Write-Host "Removing temporary nmap XML reports located in $($TempDir)"
@@ -172,11 +238,5 @@ Param(
     }
 }
 
-
-Function Find-FtpServicesWithAnonAuth(){
-    Write-Warning "Hello World!"
-}
-
 # Exported functions
-Export-ModuleMember -Function Find-FtpServicesWithAnonAuth
-Export-ModuleMember -Function Find-HttpServicesUsingWeakAuth
+Export-ModuleMember -Function Find-FtpServicesWithAnonAuth, Find-HttpServicesUsingWeakAuth
