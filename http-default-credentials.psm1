@@ -2,7 +2,7 @@ $BaseLocation = $env:TEMP
 $NmapPath = "C:\Program Files (x86)\Nmap\nmap.exe"  
  
 # Functions for internal use
-Function Get-Nmap-Location()
+Function GetNmapLocation()
 {
     $NmapExe = Get-Item $NmapPath
     if(!$NmapExe){
@@ -13,7 +13,7 @@ Function Get-Nmap-Location()
     $NmapPath
 }
 
-Function Find-Http-Credentials()
+Function Find-HttpServicesUsingWeakAuth()
 {
 Param(
     # Hosts to scan
@@ -148,6 +148,6 @@ Param(
     }
 }
 
-Function Find-Anon-FtpServices(){
+Function Find-FtpServicesWithAnonAuth(){
     Write-Warning "Hello World!"
 }
