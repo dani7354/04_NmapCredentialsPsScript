@@ -1,3 +1,18 @@
+$BaseLocation = $env:TEMP
+$NmapPath = "C:\Program Files (x86)\Nmap\nmap.exe"  
+ 
+# Functions for internal use
+Function Get-Nmap-Location()
+{
+    $NmapExe = Get-Item $NmapPath
+    if(!$NmapExe){
+       Write-Error "Nmap executable not found at the specified path. Please update this path and run the script again!"
+       Write-Error "Exiting with code 1"
+       exit 1 
+    }
+    $NmapPath
+}
+
 Function Find-Http-Credentials()
 {
 Param(
@@ -29,17 +44,9 @@ Param(
     [Boolean]$DeleteOrgXmlReports = $true
     )
     
-    $BaseLocation = $env:TEMP
-    $NmapPath = "C:\Program Files (x86)\Nmap\nmap.exe"  
-    
     # Check for valid path to nmap executable
-    $NmapExe = Get-Item $NmapPath
-    if(!$NmapExe){
-        Write-Host "Nmap executable not found at the specified path. Please update this path and run the script again!"
-        Write-Host "Exiting with code 1"
-        exit 1
-    }
-    
+    $NmapExe = Get-Nmap-Location
+  
     # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
     $TempXmlBaseName = $HostRange.Replace('/', '_').Replace('.', '_')
     
@@ -139,4 +146,8 @@ Param(
             Write-Host "Nmap XML reports are located in $($TempDir)"
         }
     }
+}
+
+Function Find-Anon-FtpServices(){
+    Write-Warning "Hello World!"
 }
