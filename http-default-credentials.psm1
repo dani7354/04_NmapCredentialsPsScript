@@ -173,6 +173,7 @@ Param(
             Write-Host "Nmap XML reports are located in $($TempDir)"
         }
     }
+}
 
 
 Function Find-FtpServicesWithAnonAuth(){
