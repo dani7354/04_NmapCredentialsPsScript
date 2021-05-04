@@ -43,14 +43,12 @@ Function GetServicesFromXml()
         {
             # Check if the host state == up
             if($Host.status.state -ne "up"){
-                Write-Host "Host not up"
                 continue
             }
 
             # Check for XML node with valid IP address
             $AddressNode = if($Host.SelectSingleNode("address[@addrtype='ipv4']")) { $Host.SelectSingleNode("address[@addrtype='ipv4']") } Else { $Host.SelectSingleNode("address[@addrtype='ipv6']")  }
             if(!$AddressNode.addr){ # TODO: check if theres a better way to check false /null 
-                Write-Host "Host skipped!"
                     continue
             }
             
@@ -58,7 +56,6 @@ Function GetServicesFromXml()
                 Mac = if($Host.SelectSingleNode("address[@addrtype='mac']")) {  $Host.SelectSingleNode("address[@addrtype='mac']").addr } Else { "" }
                 Ip = $AddressNode.addr
             }
-
 
             # Read all open ports
             $PortNodes = $Host.SelectNodes("ports/port")
@@ -179,3 +176,7 @@ Param(
 Function Find-FtpServicesWithAnonAuth(){
     Write-Warning "Hello World!"
 }
+
+# Exported functions
+Export-ModuleMember -Function Find-FtpServicesWithAnonAuth
+Export-ModuleMember -Function Find-HttpServicesUsingWeakAuth
