@@ -62,7 +62,7 @@ Param(
             & $NmapExe -sV --script http-default-accounts.nse  --script-args http-default-accounts.fingerprintfile=$Fingerprints -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
         }
         else{
-            & $NmapExe -sV --script http-default-accounts.nse -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+            & $NmapExe -sV --script "http-default-accounts.nse, ftp-anon.nse" -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
         }
     }
     

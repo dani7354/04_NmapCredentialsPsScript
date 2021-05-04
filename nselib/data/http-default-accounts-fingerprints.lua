@@ -1783,3 +1783,27 @@ table.insert(fingerprints, {
 		and resp.header["location"] == "/administration.php"
   end
 })
+
+
+table.insert(fingerprints, {
+  -- Grafana v. 6.7.4
+  name = "Grafana 6.7.4",
+  category = "web",
+  paths = {
+    {path = "/login"}
+  },
+  target_check = function (host, port, path, response)
+    return response.status == 200
+           and response.body
+           and response.body:find("<title>Grafana</title>", 1, true)
+  end,
+  login_combos = {
+    {username = "admin", password = "admin"}
+  },
+  login_check = function (host, port, path, user, pass)
+	local form = { username=user, password=pass }
+	resp =  http_post_simple(host, port, url.absolute(path, "/login"), nil, form)
+	return resp.status == 200
+  end
+})
+
