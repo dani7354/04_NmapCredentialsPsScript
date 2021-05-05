@@ -69,7 +69,7 @@ Function GetServicesFromXml()
             }
             
             $HostObj = [PSCustomObject]@{
-                Mac = if($Host.SelectSingleNode("address[@addrtype='mac']")) {  $Host.SelectSingleNode("address[@addrtype='mac']").addr } Else { "" }
+                Mac = if($Host.SelectSingleNode("address[@addrtype='mac']")) {  $Host.SelectSingleNode("address[@addrtype='mac']").addr } Else { "N/A" }
                 Ip = $AddressNode.addr
             }
 
@@ -81,14 +81,14 @@ Function GetServicesFromXml()
                     continue
                 }
                 $ServiceObj = [PSCustomObject]@{
-                    HostIp = $HostObj.Ip
-                    HostMac = $HostObj.Mac
-                    Protocol = $Port.protocol
-                    Port = $Port.portid
-                    State = $Port.state.state
-                    Service = "$($Port.service.name) $($Port.service.tunnel)"
-                    ServiceDescription = "$($Port.service.product) $($Port.service.version) $($Port.service.extrainfo)"
-                    NseScriptResult = ""
+                    HostIp = $HostObj.Ip.Trim()
+                    HostMac = $HostObj.Mac.Trim()
+                    Protocol = $Port.protocol.Trim()
+                    Port = $Port.portid.Trim()
+                    State = $Port.state.state.Trim()
+                    Service = "$($Port.service.name) $($Port.service.tunnel)".Trim()
+                    ServiceDescription = if($Port.service.product -ne "") { "$($Port.service.product) $($Port.service.version) $($Port.service.extrainfo)".Trim() } else { "N/A" }
+                    NseScriptResult = "N/A"
                 }
 
                 switch ($Port.service.name) {
@@ -99,7 +99,7 @@ Function GetServicesFromXml()
 
                 if($ScriptNode){
                    $ScriptOutput = $ScriptNode.output -Replace "`n","" -Replace "`r",""
-                    $ServiceObj.NseScriptResult = "[$($ScriptNode.id)]: $($ScriptOutput)"
+                    $ServiceObj.NseScriptResult = "[$($ScriptNode.id)]: $($ScriptOutput)".Trim()
                 }
                 $ServiceCol += $ServiceObj
             }
