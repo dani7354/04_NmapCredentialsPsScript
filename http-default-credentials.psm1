@@ -16,7 +16,7 @@ Function GetNmapLocation()
 Function CreateTemporaryDirectory()
 {
     $TempDir = "$($BaseLocation)\nmap-temp-"
-    $TempDir += Get-Date -Format "dd-MM-yyyy_HH_mm"
+    $TempDir += Get-Date -Format "dd-MM-yyyy_HH_mm_ss_fff"
     $ExistingFolder = Get-Item $TempDir -ErrorAction SilentlyContinue
 
     if($ExistingFolder){
@@ -99,7 +99,7 @@ Function Find-HttpServicesUsingWeakAuth()
 Param(
     # Hosts to scan
     [parameter(Mandatory)]
-    [String]$HostRange, 
+    [String[]]$HostRanges, 
     
     # Path to CSV file for scan results
     [parameter(Mandatory=$false)]
@@ -128,34 +128,38 @@ Param(
    try{ 
     # Check for valid path to nmap executable
     $NmapExe = GetNmapLocation
-  
-    # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
-    $TempXmlBaseName = $HostRange.Replace('/', '_').Replace('.', '_').Replace(',', '_')
-    
+
     # Folder for temporary generated XML scan reports
     $TempDir = CreateTemporaryDirectory
 
-    # Discover hosts, services and try out default credentials.
-    if($PortRange -ne ""){
-        $TempOutFile = "$($TempXmlBaseName)_ports$($PortRange).xml"
-        Write-Host "Performing scan and default credentials check on host(s) $($HostRange) TCP ports $($PortRange)"
+    foreach ($HostRange in $HostRanges) {
+        # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
+        $TempXmlBaseName = $HostRange.Replace('/', '_').Replace('.', '_').Replace(',', '_')
 
-        if($Fingerprints -ne ""){
-            Write-Host "Using alternative fingerprint file: $($Fingerprints)"
-            & $NmapExe -sV --script "http-default-accounts.nse" --script-args http-default-accounts.fingerprintfile=$Fingerprints -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
-        }
-        else{
-            & $NmapExe -sV --script "http-default-accounts.nse" -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+        # Discover hosts, services and try out default credentials.
+        if($PortRange -ne ""){
+            $TempOutFile = "$($TempXmlBaseName)_ports$($PortRange).xml"
+            Write-Host "Performing scan and default credentials check on host(s) $($HostRange) TCP ports $($PortRange)"
+
+            if($Fingerprints -ne ""){
+                Write-Host "Using alternative fingerprint file: $($Fingerprints)"
+                & $NmapExe -sV --script "http-default-accounts.nse" --script-args http-default-accounts.fingerprintfile=$Fingerprints -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+            }
+            else{
+                & $NmapExe -sV --script "http-default-accounts.nse" -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+            }
         }
     }
     
-        # Read the generated XML reports
-        $Services = GetServicesFromXml -XmlDir $TempDir
-        $ServicesSorted = $Services |Sort-Object -Property "HostIp"
-        if($Csv -ne "" -and $ServicesSorted.Length -gt 0){
-            $ServicesSorted |Export-Csv -Path $Csv -Delimiter ";" 
-        }
-        $ServicesSorted
+    # Read the generated XML reports
+    Write-Host "Reading XML output from the scans preparing output"
+    $Services = GetServicesFromXml -XmlDir $TempDir
+    $ServicesSorted = $Services |Sort-Object -Property "HostIp"
+    if($Csv -ne "" -and $ServicesSorted.Length -gt 0){
+        Write-Host "Exporting CSV file: $($Csv)..."
+        $ServicesSorted |Export-Csv -Path $Csv -Delimiter ";" 
+    }
+    $ServicesSorted
     }
     catch {
         Write-Error -Message "Something went wrong!" 
@@ -178,7 +182,7 @@ Function Find-FtpServicesWithAnonAuth(){
 # Hosts to scan
 Param(
     [parameter(Mandatory)]
-    [String]$HostRange, 
+    [String[]]$HostRanges, 
     
     # Path to CSV file for scan results
     [parameter(Mandatory=$false)]
@@ -203,22 +207,24 @@ Param(
     try {
         # Check for valid path to nmap executable
         $NmapExe = GetNmapLocation
-  
-        # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
-        $TempXmlBaseName = $HostRange.Replace('/', '_').Replace('.', '_').Replace(',', '_')
-    
+
         # Folder for temporary generated XML scan reports
         $TempDir = CreateTemporaryDirectory
+        foreach ($HostRange in $HostRanges) {
+            # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
+            $TempXmlBaseName = $HostRange.Replace('/', '_').Replace('.', '_').Replace(',', '_')
 
-        # Discover hosts, services and try out default credentials.
-        $TempOutFile = "$($TempXmlBaseName)_ports$($Ports).xml"
-        Write-Host "Scanning for services and testing FTP services for anonymous login on host(s) $($HostRange)..."
+            # Discover hosts, services and try out default credentials.
+            $TempOutFile = "$($TempXmlBaseName)_ports$($Ports).xml"
+            Write-Host "Scanning for services and testing FTP services for anonymous login on host(s) $($HostRange) TCP ports $($Ports)..."
 
-        & $NmapExe -sV --script "ftp-anon.nse" -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+            & $NmapExe -sV --script "ftp-anon.nse" -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+        }
 
         $Services = GetServicesFromXml -XmlDir $TempDir
         $ServicesSorted = $Services | Sort-Object -Property "HostIp"
         if($Csv -ne ""){
+            Write-Host "Exporting CSV file: $($Csv)..."
             $ServicesSorted | Export-Csv -Path $Csv -Delimiter ";"
         }
         $ServicesSorted
