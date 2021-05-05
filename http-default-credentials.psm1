@@ -45,7 +45,6 @@ Function GetServicesFromXml()
             if($Host.status.state -ne "up"){
                 Write-Host "Skip host (up)"
                 continue
-
             }
 
             # Check for XML node with valid IP address
@@ -104,6 +103,7 @@ Param(
     
     # Path to CSV file for scan results
     [parameter(Mandatory=$false)]
+    [ValidateScript({$_ -match ".+\.csv"})]
     [String]$Csv = "",
     
     # fingerprint file. If none is specified the default fingerprint file will be used
@@ -182,6 +182,7 @@ Param(
     
     # Path to CSV file for scan results
     [parameter(Mandatory=$false)]
+    [ValidateScript({$_ -match ".+\.csv"})]
     [String]$Csv = "",
     
     # Nmap scan timing option. Default: T3, Most aggressive: T5, Most paranoid: T0 see https://nmap.org/book/man-performance.html for details
