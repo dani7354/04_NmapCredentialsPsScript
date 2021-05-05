@@ -2,8 +2,7 @@ $BaseLocation = $env:TEMP
 $NmapPath = "C:\Program Files (x86)\Nmap\nmap.exe"  
  
 # Functions for internal use
-Function GetNmapLocation()
-{
+Function GetNmapLocation(){
     $NmapExe = Get-Item $NmapPath
     if(!$NmapExe){
        Write-Error "Nmap executable not found at the specified path. Please update this path and run the script again!"
@@ -13,8 +12,7 @@ Function GetNmapLocation()
     $NmapExe
 }
 
-Function CreateTemporaryDirectory()
-{
+Function CreateTemporaryDirectory(){
     $TempDir = "$($BaseLocation)\nmap-temp-"
     $TempDir += Get-Date -Format "dd-MM-yyyy_HH_mm_ss_fff"
     $ExistingFolder = Get-Item $TempDir -ErrorAction SilentlyContinue
@@ -43,8 +41,7 @@ Function CheckForExistingOutputFile(){
     $Filename
 }
 
-Function GetServicesFromXml()
-{
+Function GetServicesFromXml(){
     Param(
         [Parameter(Mandatory)]
         [String]$XmlDir
@@ -61,18 +58,15 @@ Function GetServicesFromXml()
             if($Host.status.state -ne "up"){
                 continue
             }
-
             # Check for XML node with valid IP address
             $AddressNode = if($Host.SelectSingleNode("address[@addrtype='ipv4']")) { $Host.SelectSingleNode("address[@addrtype='ipv4']") } Else { $Host.SelectSingleNode("address[@addrtype='ipv6']")  }
             if(!$AddressNode.addr){ # TODO: check if theres a better way to check false /null 
                     continue
             }
-            
             $HostObj = [PSCustomObject]@{
                 Mac = if($Host.SelectSingleNode("address[@addrtype='mac']")) {  $Host.SelectSingleNode("address[@addrtype='mac']").addr } Else { "N/A" }
                 Ip = $AddressNode.addr
             }
-
             # Read all open ports
             $PortNodes = $Host.SelectNodes("ports/port")
             foreach ($Port in $PortNodes) 
@@ -90,13 +84,11 @@ Function GetServicesFromXml()
                     ServiceDescription = if($Port.service.product -ne "") { "$($Port.service.product) $($Port.service.version) $($Port.service.extrainfo)".Trim() } else { "N/A" }
                     NseScriptResult = "N/A"
                 }
-
                 switch ($Port.service.name) {
                     "http" { $ScriptNode = $Port.SelectSingleNode("script[@id='http-default-accounts']") }
                     "ftp" { $ScriptNode = $Port.SelectSingleNode("script[@id='ftp-anon']") }
                     Default { $ScriptNode = $null }
                 }
-
                 if($ScriptNode){
                    $ScriptOutput = $ScriptNode.output -Replace "`n","" -Replace "`r",""
                     $ServiceObj.NseScriptResult = "[$($ScriptNode.id)]: $($ScriptOutput)".Trim()
@@ -108,8 +100,7 @@ Function GetServicesFromXml()
     $ServiceCol
 }
 
-Function Find-HttpServices()
-{
+Function Find-HttpServices(){
 Param(
     # Hosts to scan
     [parameter(Mandatory)]
