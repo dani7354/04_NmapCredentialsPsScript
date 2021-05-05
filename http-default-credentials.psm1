@@ -27,6 +27,22 @@ Function CreateTemporaryDirectory()
     $TempDir
 }
 
+Function CheckForExistingOutputFile(){
+    Param(
+        # Path or name for output file
+        [Parameter(Mandatory)]
+        [String]$Filename
+    )
+    $FileNameBase = $Filename.Substring(0,$Filename.LastIndexOf("."))
+    $FileExtension = $Filename.Substring($Filename.LastIndexOf("."))
+    $Counter = 0
+    while (Test-Path $Filename) {
+       $Filename = "$($FileNameBase)_$($Counter)$($FileExtension)"
+       $Counter++ 
+    }
+    $Filename
+}
+
 Function GetServicesFromXml()
 {
     Param(
@@ -92,7 +108,7 @@ Function GetServicesFromXml()
     $ServiceCol
 }
 
-Function Find-HttpServicesUsingWeakAuth()
+Function Find-HttpServices()
 {
 Param(
     # Hosts to scan
@@ -154,8 +170,9 @@ Param(
     $Services = GetServicesFromXml -XmlDir $TempDir
     $ServicesSorted = $Services |Sort-Object -Property "HostIp"
     if($Csv -ne "" -and $ServicesSorted.Length -gt 0){
-        Write-Host "Exporting CSV file: $($Csv)..."
-        $ServicesSorted |Export-Csv -Path $Csv -Delimiter ";" 
+        $CsvFile = CheckForExistingOutputFile -Filename $Csv 
+        Write-Host "Exporting CSV file: $($CsvFile)..."
+        $ServicesSorted |Export-Csv -Path $CsvFile -Delimiter ";" 
     }
     $ServicesSorted
     }
@@ -175,7 +192,7 @@ Param(
    }
 }
 
-Function Find-FtpServicesWithAnonAuth(){
+Function Find-FtpServices(){
 # Hosts to scan
 Param(
     [parameter(Mandatory)]
@@ -221,8 +238,9 @@ Param(
         $Services = GetServicesFromXml -XmlDir $TempDir
         $ServicesSorted = $Services | Sort-Object -Property "HostIp"
         if($Csv -ne ""){
-            Write-Host "Exporting CSV file: $($Csv)..."
-            $ServicesSorted | Export-Csv -Path $Csv -Delimiter ";"
+            $CsvFile = CheckForExistingOutputFile -Filename $Csv
+            Write-Host "Exporting CSV file: $($CsvFile)..."
+            $ServicesSorted | Export-Csv -Path $CsvFile -Delimiter ";"
         }
         $ServicesSorted
     }
@@ -243,4 +261,6 @@ Param(
 }
 
 # Exported functions
-Export-ModuleMember -Function Find-FtpServicesWithAnonAuth, Find-HttpServicesUsingWeakAuth
+New-Alias -Name fd-ftp -Value Find-FtpServices
+New-Alias -Name fd-http -Value Find-HttpServices
+Export-ModuleMember -Function Find-FtpServices, Find-HttpServices -Alias fd-ftp, fd-http
