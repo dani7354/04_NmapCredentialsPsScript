@@ -43,14 +43,12 @@ Function GetServicesFromXml()
         {
             # Check if the host state == up
             if($Host.status.state -ne "up"){
-                Write-Host "Skip host (up)"
                 continue
             }
 
             # Check for XML node with valid IP address
             $AddressNode = if($Host.SelectSingleNode("address[@addrtype='ipv4']")) { $Host.SelectSingleNode("address[@addrtype='ipv4']") } Else { $Host.SelectSingleNode("address[@addrtype='ipv6']")  }
             if(!$AddressNode.addr){ # TODO: check if theres a better way to check false /null 
-                Write-Host "Skip host"
                     continue
             }
             
@@ -119,7 +117,7 @@ Param(
     # TCP port range
     [parameter(Mandatory=$false)]
     [ValidateScript({$_ -ne ""})]
-    [String]$PortRange ="80,443",
+    [String]$PortRange ="80,443,631,7080,8080,8443,8088,5800,3872,8180,8000,9000,9091",
 
     # Delete the raw reports from the scans (located in %temp%)
     [parameter(Mandatory=$false)]
@@ -176,7 +174,6 @@ Param(
         }
    }
 }
-
 
 Function Find-FtpServicesWithAnonAuth(){
 # Hosts to scan
