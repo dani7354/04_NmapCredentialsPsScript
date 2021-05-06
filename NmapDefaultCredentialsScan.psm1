@@ -378,7 +378,7 @@ Param(
                 & $NmapExe -sV --script "ssh-brute.nse, ssh2-enum-algos.nse" --script-args userdb=$UsernameFile,passdb=$PasswordFile -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
             }
             elseif($CredFile -ne ""){
-                & $NmapExe -sV --script "ssh-brute.nse, ssh2-enum-algos.nse" -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+                & $NmapExe -sV --script "ssh-brute.nse, ssh2-enum-algos.nse" --script-args brute.credfile=$CredFile -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
             }
             else{
                 & $NmapExe -sV --script "ssh-brute.nse, ssh2-enum-algos.nse" -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
