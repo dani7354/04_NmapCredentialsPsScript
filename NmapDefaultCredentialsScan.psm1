@@ -45,24 +45,31 @@ Function CheckForExistingOutputFile(){
 
 Function FindInsecureAlgos(){
     Param(
-        # Elements (strings) representing algorithms from ssh2-enum-algos.nse
+        # Cipher algorithms output from ssh2-enum-algos.nse
         [Parameter(Mandatory)]
         [String[]]
-        $Elements
+        $EncAlgos,
+        
+        # Mac algorithms output from ssh2-enum-algos.nse
+        [Parameter(Mandatory)]
+        [String[]]
+        $MacAlgos
     )
-    
-    $MacAlgos = "MAC:"
-    $CipherAlgos = "CIPHERS:"
-    foreach ($Algo in $Elements) {
-        Write-Host $Algo
-        if($InsecureCiphers.Contains($Algo.Trim())){
-            $CipherAlgos += " $($Algo)"
-        }
-        elseif($InsecureMac.Contains($Algo.Trim())){
-            $MacAlgos += " $($Algo)"
+    $MacAlgosStr = ""
+    $EncAlgosStr = ""
+    foreach ($EncAlgo in $EncAlgos) {
+        if($InsecureCiphers.Contains($EncAlgo.Trim())){
+            $EncAlgosStr += " $($EncAlgo)"
         }
     }
-    $Result = "[InsecureAlgorithms]: $($CipherAlgos), $($MacAlgos)"
+    foreach ($MacAlgo in $MacAlgos) {
+        if($InsecureMac.Contains($MacAlgo.Trim())){
+            $MacAlgosStr += " $($MacAlgo)"
+        }   
+    }
+    $Result = "[InsecureAlgorithms]:"
+    $Result += if($EncAlgosStr.Length -gt 0) { "  Encryption: $($EncAlgosStr) " } else { "" }
+    $Result += if($MacAlgosStr.Length -gt 0) { "  MAC: $($MacAlgosStr) " } else { "" }
     $Result
 }
 
@@ -88,10 +95,8 @@ Function GetServicesFromXml(){
             if(!$AddressNode.addr){ # TODO: check if theres a better way to check false /null 
                     continue
             }
-            $HostObj = [PSCustomObject]@{
-                Mac = if($Host.SelectSingleNode("address[@addrtype='mac']")) {  $Host.SelectSingleNode("address[@addrtype='mac']").addr } Else { "N/A" }
-                Ip = $AddressNode.addr
-            }
+            $Mac = if($Host.SelectSingleNode("address[@addrtype='mac']")) {  $Host.SelectSingleNode("address[@addrtype='mac']").addr } Else { "N/A" }
+            $Ip = $AddressNode.addr
             # Read all open ports
             $PortNodes = $Host.SelectNodes("ports/port")
             foreach ($Port in $PortNodes) 
@@ -100,31 +105,24 @@ Function GetServicesFromXml(){
                     continue
                 }
                 $ServiceObj = [PSCustomObject]@{
-                    HostIp = $HostObj.Ip.Trim()
-                    HostMac = $HostObj.Mac.Trim()
+                    HostIp = $Ip.Trim()
+                    HostMac = $Mac.Trim()
                     Protocol = $Port.protocol.Trim()
                     Port = $Port.portid.Trim()
                     State = $Port.state.state.Trim()
                     Service = "$($Port.service.name) $($Port.service.tunnel)".Trim()
                     ServiceDescription = if($Port.service.product -ne "") { "$($Port.service.product) $($Port.service.version) $($Port.service.extrainfo)".Trim() } else { "N/A" }
-                    NseScriptResult = "N/A"
+                    NseScriptResult = ""
                 }
                 switch ($Port.service.name) {
                     "http" { $ScriptNode = $Port.SelectSingleNode("script[@id='http-default-accounts']") }
                     "ftp" { $ScriptNode = $Port.SelectSingleNode("script[@id='ftp-anon']") }
                     "ssh" {
-                        Write-Host "Mojn"
-                        $Parameters = @()
                         if($Port.SelectSingleNode("script[@id='ssh2-enum-algos']") -ne ""){
                             $ScriptNode =$Port.SelectSingleNode("script[@id='ssh2-enum-algos']")
-                            $ElementNodes = $ScriptNode.SelectNodes("//elem")
-                            Write-Host "Pys"
-                            foreach ($Element in $ElementNodes) {
-                                Write-Host "Pys2"
-                                $Parameters += $Element.'#text'
-                            }
-
-                            $ServiceObj.NseScriptResult = if($Parameters.Length -gt 0) { (FindInSecureAlgos -Elements $Parameters) } else {"N/A"}
+                            $EncryptionAlgos = ($ScriptNode.SelectNodes("//script/table[@key='encryption_algorithms']/elem") | ForEach-Object { $_.'#text' })
+                            $MacAlgos = ($ScriptNode.SelectNodes("//script/table[@key='mac_algorithms']/elem") | ForEach-Object { $_.'#text' })
+                            $ServiceObj.NseScriptResult = if($EncryptionAlgos.Length -gt 0) { (FindInSecureAlgos -EncAlgos $EncryptionAlgos -MacAlgos $MacAlgos) } else {"N/A"}
                         }
 
                         $ScriptNode = $Port.SelectSingleNode("script[@id='ssh-brute']") 
@@ -364,7 +362,7 @@ Param(
                 & $NmapExe -sV --script "ssh-brute.nse, ssh2-enum-algos.nse" --script-args userdb=$UsernameFile,passdb=$PasswordFile -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
             }
             elseif($CredFile -ne ""){
-                & $NmapExe -sV --script "ssh2-enum-algos.nse" -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+                & $NmapExe -sV --script "ssh-brute.nse, ssh2-enum-algos.nse" -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
             }
             else{
                 & $NmapExe -sV --script "ssh-brute.nse, ssh2-enum-algos.nse" -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
