@@ -3,6 +3,8 @@ $NmapPath = "C:\Program Files (x86)\Nmap\nmap.exe"
 
 $InsecureCiphers = @("3des-cbc", "arcfour", "arcfour256", "arcfour128", "aes256-cbc", "aes128-cbc", "aes196-cbc")
 $InsecureMac = @("hmac-md5", "hmac-md5-96", "hmac-sha1-96", "hmac-sha1", "hmac-md5-96@openssh.com", "hmac-md5-etm@openssh.com", "hmac-md5-96-etm@openssh.com")
+$InsecureKeyEx = @("diffie-hellman-group1-sha1", " diffie-hellman-group14-sha1", "rsa1024-sha1")
+
 # Functions for internal use
 Function GetNmapLocation(){
     $NmapExe = Get-Item $NmapPath
@@ -49,6 +51,11 @@ Function FindInsecureAlgos(){
         [Parameter(Mandatory)]
         [String[]]
         $EncAlgos,
+
+        # Key exchange algorithms output from ssh-enum-algos.nse
+        [Parameter(Mandatory)]
+        [String[]]
+        $KeyExAlgos,
         
         # Mac algorithms output from ssh2-enum-algos.nse
         [Parameter(Mandatory)]
@@ -56,10 +63,16 @@ Function FindInsecureAlgos(){
         $MacAlgos
     )
     $MacAlgosStr = ""
+    $KeyExAlgosStr = ""
     $EncAlgosStr = ""
     foreach ($EncAlgo in $EncAlgos) {
         if($InsecureCiphers.Contains($EncAlgo.Trim())){
             $EncAlgosStr += " $($EncAlgo)"
+        }
+    }
+    foreach ($KeyExAlgo in $KeyExAlgos) {
+        if($InsecureKeyEx.Contains($KeyExAlgo.Trim())){
+            $KeyExAlgosStr += " $($KeyExAlgo)"
         }
     }
     foreach ($MacAlgo in $MacAlgos) {
@@ -68,8 +81,9 @@ Function FindInsecureAlgos(){
         }   
     }
     $Result = "[InsecureAlgorithms]:"
-    $Result += if($EncAlgosStr.Length -gt 0) { "  Encryption: $($EncAlgosStr) " } else { "" }
-    $Result += if($MacAlgosStr.Length -gt 0) { "  MAC: $($MacAlgosStr) " } else { "" }
+    $Result += if($EncAlgosStr.Length -gt 0) { "  Encryption: $($EncAlgosStr) " } else { " Encryption: NONE" }
+    $Result += if($MacAlgosStr.Length -gt 0) { "  MAC: $($MacAlgosStr) " } else { " MAC: NONE" }
+    $Result += if($KeyExAlgosStr.Length -gt 0) { "  Key Exchange: $($KeyExAlgosStr) " } else { " Key Exchange: NONE " }
     $Result
 }
 
@@ -122,7 +136,9 @@ Function GetServicesFromXml(){
                             $ScriptNode =$Port.SelectSingleNode("script[@id='ssh2-enum-algos']")
                             $EncryptionAlgos = ($ScriptNode.SelectNodes("//script/table[@key='encryption_algorithms']/elem") | ForEach-Object { $_.'#text' })
                             $MacAlgos = ($ScriptNode.SelectNodes("//script/table[@key='mac_algorithms']/elem") | ForEach-Object { $_.'#text' })
-                            $ServiceObj.NseScriptResult = if($EncryptionAlgos.Length -gt 0) { (FindInSecureAlgos -EncAlgos $EncryptionAlgos -MacAlgos $MacAlgos) } else {"N/A"}
+                            $KeyExAlgos = ($ScriptNode.SelectNodes("//script/table[@key='kex_algorithms']/elem") | ForEach-Object { $_.'#text' })
+ 
+                            $ServiceObj.NseScriptResult = if($EncryptionAlgos.Length -gt 0) { (FindInSecureAlgos -EncAlgos $EncryptionAlgos -KeyExAlgos $KeyExAlgos -MacAlgos $MacAlgos) } else {"N/A"}
                         }
 
                         $ScriptNode = $Port.SelectSingleNode("script[@id='ssh-brute']") 
