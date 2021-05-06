@@ -2,7 +2,7 @@ $BaseLocation = $env:TEMP
 $NmapPath = "C:\Program Files (x86)\Nmap\nmap.exe"  
 
 $InsecureCiphers = @("3des-cbc", "arcfour", "arcfour256", "arcfour128", "aes256-cbc", "aes128-cbc", "aes196-cbc")
-$InsecureMac = @("hmac-md5", "hmac-md5-96", "hmac-sha1-96", "hmac-md5-96@openssh.com", "hmac-md5-etm@openssh.com", "hmac-md5-96-etm@openssh.com")
+$InsecureMac = @("hmac-md5", "hmac-md5-96", "hmac-sha1-96", "hmac-sha1", "hmac-md5-96@openssh.com", "hmac-md5-etm@openssh.com", "hmac-md5-96-etm@openssh.com")
 # Functions for internal use
 Function GetNmapLocation(){
     $NmapExe = Get-Item $NmapPath
@@ -41,6 +41,29 @@ Function CheckForExistingOutputFile(){
        $Counter++ 
     }
     $Filename
+}
+
+Function FindInsecureAlgos(){
+    Param(
+        # Elements (strings) representing algorithms from ssh2-enum-algos.nse
+        [Parameter(Mandatory)]
+        [String[]]
+        $Elements
+    )
+    
+    $MacAlgos = "MAC:"
+    $CipherAlgos = "CIPHERS:"
+    foreach ($Algo in $Elements) {
+        Write-Host $Algo
+        if($InsecureCiphers.Contains($Algo.Trim())){
+            $CipherAlgos += " $($Algo)"
+        }
+        elseif($InsecureMac.Contains($Algo.Trim())){
+            $MacAlgos += " $($Algo)"
+        }
+    }
+    $Result = "[InsecureAlgorithms]: $($CipherAlgos), $($MacAlgos)"
+    $Result
 }
 
 Function GetServicesFromXml(){
@@ -89,12 +112,28 @@ Function GetServicesFromXml(){
                 switch ($Port.service.name) {
                     "http" { $ScriptNode = $Port.SelectSingleNode("script[@id='http-default-accounts']") }
                     "ftp" { $ScriptNode = $Port.SelectSingleNode("script[@id='ftp-anon']") }
-                    "ssh" {  $ScriptNode = $Port.SelectSingleNode("script[@id='ssh-brute']") }
+                    "ssh" {
+                        Write-Host "Mojn"
+                        $Parameters = @()
+                        if($Port.SelectSingleNode("script[@id='ssh2-enum-algos']") -ne ""){
+                            $ScriptNode =$Port.SelectSingleNode("script[@id='ssh2-enum-algos']")
+                            $ElementNodes = $ScriptNode.SelectNodes("//elem")
+                            Write-Host "Pys"
+                            foreach ($Element in $ElementNodes) {
+                                Write-Host "Pys2"
+                                $Parameters += $Element.'#text'
+                            }
+
+                            $ServiceObj.NseScriptResult = if($Parameters.Length -gt 0) { (FindInSecureAlgos -Elements $Parameters) } else {"N/A"}
+                        }
+
+                        $ScriptNode = $Port.SelectSingleNode("script[@id='ssh-brute']") 
+                    }
                     Default { $ScriptNode = $null }
                 }
                 if($ScriptNode){
                    $ScriptOutput = $ScriptNode.output -Replace "`n","" -Replace "`r",""
-                    $ServiceObj.NseScriptResult = "[$($ScriptNode.id)]: $($ScriptOutput)".Trim()
+                    $ServiceObj.NseScriptResult += "[$($ScriptNode.id)]: $($ScriptOutput)".Trim()
                 }
                 $ServiceCol += $ServiceObj
             }
@@ -109,7 +148,7 @@ Function GetXmlFileName(){
         [Parameter(Mandatory)]
         [String]$HostRange
     )
-    $FileName = $HostRange -replace ".","_" -replace "::","_" -replace "/", "_" -replace ":","_" -replace ",","_"
+    $FileName = $HostRange.Replace(".","_").Replace("/", "_")
     $FileName += ".xml"
     $FileName
 }
@@ -325,7 +364,7 @@ Param(
                 & $NmapExe -sV --script "ssh-brute.nse, ssh2-enum-algos.nse" --script-args userdb=$UsernameFile,passdb=$PasswordFile -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
             }
             elseif($CredFile -ne ""){
-                & $NmapExe -sV --script "ssh-brute.nse, ssh2-enum-algos.nse" --script-args brute.credfile=$CredFile -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+                & $NmapExe -sV --script "ssh2-enum-algos.nse" -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
             }
             else{
                 & $NmapExe -sV --script "ssh-brute.nse, ssh2-enum-algos.nse" -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
