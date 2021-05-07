@@ -235,7 +235,8 @@ Param(
     $ServicesSorted
     }
     catch {
-        Write-Error -Message "Something went wrong!" 
+
+        Write-Host "Something went wrong: " + $_.Exception.ToString() -BackgroundColor Red
     }
     finally{
     
@@ -303,7 +304,7 @@ Param(
         $ServicesSorted
     }
     catch {
-        Write-Error -Message "Something went wrong!"
+        Write-Host "Something went wrong: " + $_.Exception.ToString() -BackgroundColor Red
     }
     finally{
     
@@ -395,7 +396,7 @@ Param(
         $ServicesSorted
     }
     catch {
-        Write-Error -Message "Something went wrong!"
+        Write-Host "Something went wrong: " + $_.Exception.ToString() -BackgroundColor Red
     }
     finally{
     
@@ -489,7 +490,7 @@ Param(
         $ServicesSorted
     }
     catch {
-        Write-Error -Message "Something went wrong!"
+        Write-Host "Something went wrong: " + $_.Exception.ToString() -BackgroundColor Red
     }
     finally{
     
