@@ -81,10 +81,40 @@ Function FindInsecureAlgos(){
         }   
     }
     $Result = "[InsecureAlgorithms]:"
-    $Result += if($EncAlgosStr.Length -gt 0) { "  Encryption: $($EncAlgosStr) " } else { " Encryption: NONE" }
-    $Result += if($MacAlgosStr.Length -gt 0) { "  MAC: $($MacAlgosStr) " } else { " MAC: NONE" }
+    $Result += if($EncAlgosStr.Length -gt 0) { "  Encryption: $($EncAlgosStr) " } else { " Encryption: NONE " }
+    $Result += if($MacAlgosStr.Length -gt 0) { "  MAC: $($MacAlgosStr) " } else { " MAC: NONE " }
     $Result += if($KeyExAlgosStr.Length -gt 0) { "  Key Exchange: $($KeyExAlgosStr) " } else { " Key Exchange: NONE " }
     $Result
+}
+
+Function GetHostsFromXml(){
+    Param(
+        [Parameter(Mandatory)]
+        [String]$XmlDir
+    )
+    $HostCol = @()
+    $XmlFiles = Get-ChildItem -Path $XmlDir
+    foreach ($File in $XmlFiles) 
+    {
+        [Xml]$ScanReport = Get-Content -Path "$($XmlDir)\$File"
+        $Hosts = $ScanReport.SelectNodes("//host")
+        foreach ($Host in $Hosts) 
+        {
+            # Check for XML node with valid IP address
+            $AddressNode = if($Host.SelectSingleNode("address[@addrtype='ipv4']")) { $Host.SelectSingleNode("address[@addrtype='ipv4']") } Else { $Host.SelectSingleNode("address[@addrtype='ipv6']")  }
+            if(!$AddressNode.addr -or $Host.status.state -ne "up"){ # TODO: check if theres a better way to check false /null 
+                    continue
+            }
+            $HostObj = [PSCustomObject]@{
+                Mac = if($Host.SelectSingleNode("address[@addrtype='mac']")) {  $Host.SelectSingleNode("address[@addrtype='mac']").addr } Else { "N/A" }
+                Ip = $AddressNode.addr
+                State = $Host.status.state
+            }
+
+            $HostCol += $HostObj
+        }
+    }
+    $HostCol
 }
 
 Function GetServicesFromXml(){
@@ -165,6 +195,161 @@ Function GetXmlFileName(){
     $FileName = $HostRange.Replace(".","_").Replace("/", "_")
     $FileName += ".xml"
     $FileName
+}
+
+Function Find-ActiveHosts(){
+# Hosts to scan
+Param(
+    [parameter(Mandatory)]
+    [String[]]$HostRanges, 
+    
+    # Path to CSV file for scan results
+    [parameter(Mandatory=$false)]
+    [ValidateScript({$_ -match ".+\.csv"})]
+    [String]$Csv = "",
+    
+    # Nmap scan timing option. Default: T3, Most aggressive: T5, Most paranoid: T0 see https://nmap.org/book/man-performance.html for details
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("T0", "T1", "T2", "T3", "T4", "T5")]
+    [String]$ScanTime = "T3",
+
+    # Delete the raw reports from the scans (located in %temp%)
+    [parameter(Mandatory=$false)]
+    [Boolean]$DeleteOrgXmlReports = $true
+    )
+
+    try {
+        # Check for valid path to nmap executable
+        $NmapExe = GetNmapLocation
+
+        # Folder for temporary generated XML scan reports
+        $TempDir = CreateTemporaryDirectory
+        foreach ($HostRange in $HostRanges) {
+            # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
+            $TempXmlBaseName = GetXmlFileName -HostRange $HostRange
+
+            # Discover hosts, services and try out default credentials.
+            $TempOutFile = "$($TempXmlBaseName).xml"
+            Write-Host "Scanning for hosts $($HostRange)..."
+
+            & $NmapExe -vv -sn $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+        }
+
+        $Hosts = GetHostsFromXml -XmlDir $TempDir
+        $HostsSorted = $Hosts | Sort-Object -Property "Ip"
+        if($Csv -ne ""){
+            $CsvFile = CheckForExistingOutputFile -Filename $Csv
+            Write-Host "Exporting CSV file: $($CsvFile)..."
+            $HostsSorted | Export-Csv -Path $CsvFile -Delimiter ";"
+        }
+        $HostsSorted
+    }
+    catch {
+        Write-Host "Something went wrong: " + $_.Exception.ToString() -BackgroundColor Red
+    }
+    finally{
+    
+        # Delete XML reports
+        if($DeleteOrgXmlReports){
+            Write-Host "Removing temporary nmap XML reports located in $($TempDir)"
+            Remove-Item -Recurse $TempDir
+        }
+        else{
+            Write-Host "Nmap XML reports are located in $($TempDir)"
+        }
+    }
+}
+
+Function Find-SshServices(){
+# Hosts to scan
+Param(
+    [parameter(Mandatory)]
+    [String[]]$HostRanges, 
+    
+    # Path to CSV file for scan results
+    [parameter(Mandatory=$false)]
+    [ValidateScript({$_ -match ".+\.csv"})]
+    [String]$Csv = "",
+
+    # File containing usernames
+    [Parameter(Mandatory=$false)]
+    [ValidateScript({ Test-Path -Path $_ })]
+    [String]$UsernameFile = "",
+    
+    # File containing usernames
+    [Parameter(Mandatory=$false)]
+    [ValidateScript({ Test-Path -Path $_ })]
+    [String]$PasswordFile = "",
+    
+    # File containing pairs of usernames and password separated by '/' (e.g. admin/password)
+    [Parameter(Mandatory=$false)]
+    [ValidateScript({ Test-Path -Path $_ })]
+    [String]$CredFile = "",
+
+
+    # Nmap scan timing option. Default: T3, Most aggressive: T5, Most paranoid: T0 see https://nmap.org/book/man-performance.html for details
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("T0", "T1", "T2", "T3", "T4", "T5")]
+    [String]$ScanTime = "T3",
+
+    # TCP port range
+    [parameter(Mandatory=$false)]
+    [ValidateScript({$_ -ne ""})]
+    [String]$Ports ="22,830,2222,2382,22222,55554",
+
+    # Delete the raw reports from the scans (located in %temp%)
+    [parameter(Mandatory=$false)]
+    [Boolean]$DeleteOrgXmlReports = $true
+    )
+
+    try {
+        # Check for valid path to nmap executable
+        $NmapExe = GetNmapLocation
+
+        # Folder for temporary generated XML scan reports
+        $TempDir = CreateTemporaryDirectory
+        foreach ($HostRange in $HostRanges) {
+            # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
+            $TempXmlBaseName = GetXmlFileName -HostRange $HostRange
+
+            # Discover hosts, services and try out default credentials.
+            $TempOutFile = "$($TempXmlBaseName)_ports$($Ports).xml"
+            Write-Host "Scanning for services and testing SSH services for anonymous login on host(s) $($HostRange) TCP ports $($Ports)..."
+
+            if($UsernameFile -ne "" -and $PasswordFile -ne ""){
+                & $NmapExe -sV --script "ssh-brute.nse, ssh2-enum-algos.nse" --script-args userdb=$UsernameFile,passdb=$PasswordFile -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+            }
+            elseif($CredFile -ne ""){
+                & $NmapExe -sV --script "ssh-brute.nse, ssh2-enum-algos.nse" --script-args brute.credfile=$CredFile -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+            }
+            else{
+                & $NmapExe -sV --script "ssh-brute.nse, ssh2-enum-algos.nse" -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+            }    
+        }
+
+        $Services = GetServicesFromXml -XmlDir $TempDir
+        $ServicesSorted = $Services | Sort-Object -Property "HostIp"
+        if($Csv -ne ""){
+            $CsvFile = CheckForExistingOutputFile -Filename $Csv
+            Write-Host "Exporting CSV file: $($CsvFile)..."
+            $ServicesSorted | Export-Csv -Path $CsvFile -Delimiter ";"
+        }
+        $ServicesSorted
+    }
+    catch {
+        Write-Host "Something went wrong: " + $_.Exception.ToString() -BackgroundColor Red
+    }
+    finally{
+    
+        # Delete XML reports
+        if($DeleteOrgXmlReports){
+            Write-Host "Removing temporary nmap XML reports located in $($TempDir)"
+            Remove-Item -Recurse $TempDir
+        }
+        else{
+            Write-Host "Nmap XML reports are located in $($TempDir)"
+        }
+    }
 }
 
 Function Find-HttpServices(){
@@ -505,8 +690,9 @@ Param(
     }
 }
 # Exported functions
+New-Alias -Name fd-hosts -Value Find-ActiveHosts
 New-Alias -Name fd-ftp -Value Find-FtpServices
 New-Alias -Name fd-http -Value Find-HttpServices
 New-Alias -Name fd-ssh -Value Find-SshServices
 New-Alias -Name fd-alls -Value Find-AllServices
-Export-ModuleMember -Function Find-FtpServices, Find-HttpServices, Find-SshServices, Find-AllServices -Alias fd-ftp, fd-http, fd-ssh
+Export-ModuleMember -Function Find-ActiveHosts, Find-FtpServices, Find-HttpServices, Find-SshServices, Find-AllServices -Alias fd-hosts, fd-ftp, fd-http, fd-ssh
