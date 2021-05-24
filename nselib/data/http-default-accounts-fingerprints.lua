@@ -1737,9 +1737,8 @@ table.insert(fingerprints, {
   end
 })
 
--- Added fingerprints for testing
+-- SimpleWeb (testservice)
 table.insert(fingerprints, {
-  -- SimpleWebservice HTTP
   name = "SimpleWebservice",
   cpe = "cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5",
   category = "web",
@@ -1758,8 +1757,8 @@ table.insert(fingerprints, {
   end
 })
 
+-- SimpleLoginForm (testservice)
 table.insert(fingerprints, {
-  -- SimpleLoginForm HTTP
   name = "SimpleLoginForm",
   cpe = "cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5",
   category = "web",
