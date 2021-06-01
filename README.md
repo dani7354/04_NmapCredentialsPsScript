@@ -16,7 +16,7 @@ Following scripts are included:
 ```
 $ git clone --single-branch https://github.com/dani7354/04_NmapCredentialsPsScript.git 
 ```
-3. Place the .psm1 file at the following location (Or at some other location in $env:PSModulePath):
+3. Place the .psm1 file at the following location (Or at some other location in `$env:PSModulePath`):
 ```
 C:\Users\<USER>\Documents\WindowsPowerShell\Modules\NmapDefaultCredentialsScan
 ```
