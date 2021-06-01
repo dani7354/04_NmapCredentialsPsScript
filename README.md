@@ -9,7 +9,6 @@ Following scripts are included:
 * __Find-SshServices__: Scans for services on the selected networks and ports. The script checks SSH service whether it is possible to gain access with a list of credentials provided by the user (or the Nmap installation). Also, it checks the SSH server's supported algorithms for key exchange, encryption and message authentication (MAC).
 * __Find-AllServices__: This script scans both FTP, HTTP and SSH services as described above.
 
-The services are used as test environment for my [Powershell module](https://github.com/dani7354/04_NmapCredentialsPsScript), which scans for services, tests them for access with default credentials and more!
 
 ## Setup
 1. Install [Nmap for Windows](https://nmap.org/book/inst-windows.html)

@@ -161,9 +161,10 @@ Function GetServicesFromXml(){
                 switch ($Port.service.name) {
                     "http" { $ScriptNode = $Port.SelectSingleNode("script[@id='http-default-accounts']") }
                     "ftp" { $ScriptNode = $Port.SelectSingleNode("script[@id='ftp-anon']") }
-                    "ssh" {
-                        if($Port.SelectSingleNode("script[@id='ssh2-enum-algos']") -ne ""){
-                            $ScriptNode =$Port.SelectSingleNode("script[@id='ssh2-enum-algos']")
+                    "ssh" { 
+                        $ScriptNode =$Port.SelectSingleNode("script[@id='ssh2-enum-algos']") 
+                        if($ScriptNode){
+                            #$ScriptNode =$Port.SelectSingleNode("script[@id='ssh2-enum-algos']")
                             $EncryptionAlgos = ($ScriptNode.SelectNodes("//script/table[@key='encryption_algorithms']/elem") | ForEach-Object { $_.'#text' })
                             $MacAlgos = ($ScriptNode.SelectNodes("//script/table[@key='mac_algorithms']/elem") | ForEach-Object { $_.'#text' })
                             $KeyExAlgos = ($ScriptNode.SelectNodes("//script/table[@key='kex_algorithms']/elem") | ForEach-Object { $_.'#text' })
@@ -289,7 +290,7 @@ Param(
     [parameter(Mandatory=$false)]
     [Boolean]$DeleteOrgXmlReports = $true
     )
-   try{ 
+   #try{ 
     # Check for valid path to nmap executable
     $NmapExe = GetNmapLocation
 
@@ -325,12 +326,14 @@ Param(
         $ServicesSorted |Export-Csv -Path $CsvFile -Delimiter ";" 
     }
     $ServicesSorted
-    }
-    catch {
+    #}
+    #catch {
+     #   $LineNumber = $_.Exception.InvocationInfo.ScriptLineNumber
+     #   $ExceptionInfo = $_.Exception.ToString()
 
-        Write-Host "Something went wrong: " + $_.Exception.ToString() -BackgroundColor Red
-    }
-    finally{
+     #   Write-Host "Something went wrong at line $($LineNumber): $($ExceptionInfo)" -BackgroundColor Red
+    #}
+    #finally{
     
         # Delete XML reports
         if($DeleteOrgXmlReports){
@@ -340,7 +343,7 @@ Param(
         else{
             Write-Host "Nmap XML reports are located in $($TempDir)"
         }
-   }
+   #}
 }
 
 Function Find-FtpServices(){
@@ -582,7 +585,10 @@ Param(
         $ServicesSorted
     }
     catch {
-        Write-Host "Something went wrong: " + $_.Exception.ToString() -BackgroundColor Red
+        $LineNumber = $_.Exception.InvocationInfo.ScriptLineNumber
+        $ExceptionInfo = $_.Exception.ToString()
+
+        Write-Host "Something went wrong at line $($LineNumber): $($ExceptionInfo)" -BackgroundColor Red
     }
     finally{
     
