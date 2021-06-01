@@ -16,11 +16,11 @@ Following scripts are included:
 ```
 $ git clone --single-branch https://github.com/dani7354/04_NmapCredentialsPsScript.git 
 ```
-3. Place the .psm1 file under:
+3. Place the .psm1 file at the following location (Or at some other location in $env:PSModulePath):
 ```
 C:\Users\<USER>\Documents\WindowsPowerShell\Modules\NmapDefaultCredentialsScan
 ```
-OR at some other location under the $env:PSModulePath.
+
 4. (Optional) Replace the following files in the Nmap install directory:
 * C:\Program Files (x86)\Nmap\nselib\data\http-default-accounts-fingerprints.lua
 * C:\Program Files (x86)\Nmap\nselib\data\shortport.lua
