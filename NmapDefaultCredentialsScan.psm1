@@ -2,7 +2,7 @@ $BaseLocation = $env:TEMP
 $NmapPath = "C:\Program Files (x86)\Nmap\nmap.exe"  
 
 $InsecureCiphers = @("3des-cbc", "arcfour", "arcfour256", "arcfour128", "aes256-cbc", "aes128-cbc", "aes196-cbc")
-$InsecureMac = @("hmac-md5", "hmac-md5-96", "hmac-sha1-96", "hmac-sha1", "hmac-md5-96@openssh.com", "hmac-md5-etm@openssh.com", "hmac-md5-96-etm@openssh.com")
+$InsecureMac = @("hmac-md5", "hmac-md5-96", "hmac-sha1-96", "hmac-md5-96@openssh.com", "hmac-md5-etm@openssh.com", "hmac-md5-96-etm@openssh.com")
 $InsecureKeyEx = @("diffie-hellman-group1-sha1", " diffie-hellman-group14-sha1", "rsa1024-sha1")
 
 # Functions for internal use
@@ -284,13 +284,13 @@ Param(
     # TCP port range
     [parameter(Mandatory=$false)]
     [ValidateScript({$_ -ne ""})]
-    [String]$PortRange ="80,443,631,7080,8080,8443,8088,5800,3872,8180,8000,9000,9091",
+    [String]$Ports ="80,443,631,7080,8080,8443,8088,5800,3872,8180,8000,9000,9091",
 
     # Delete the raw reports from the scans (located in %temp%)
     [parameter(Mandatory=$false)]
     [Boolean]$DeleteOrgXmlReports = $true
     )
-   #try{ 
+   try{ 
     # Check for valid path to nmap executable
     $NmapExe = GetNmapLocation
 
@@ -302,16 +302,16 @@ Param(
         $TempXmlBaseName = GetXmlFileName -HostRange $HostRange
 
         # Discover hosts, services and try out default credentials.
-        if($PortRange -ne ""){
-            $TempOutFile = "$($TempXmlBaseName)_ports$($PortRange).xml"
-            Write-Host "Performing scan and default credentials check on host(s) $($HostRange) TCP ports $($PortRange)"
+        if($Ports -ne ""){
+            $TempOutFile = "$($TempXmlBaseName)_ports$($Ports).xml"
+            Write-Host "Performing scan and default credentials check on host(s) $($HostRange) TCP ports $($Ports)"
 
             if($Fingerprints -ne ""){
                 Write-Host "Using alternative fingerprint file: $($Fingerprints)"
-                & $NmapExe -sV --script "http-default-accounts.nse" --script-args http-default-accounts.fingerprintfile=$Fingerprints -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+                & $NmapExe -sV --script "http-default-accounts.nse" --script-args http-default-accounts.fingerprintfile=$Fingerprints -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
             }
             else{
-                & $NmapExe -sV --script "http-default-accounts.nse" -p $PortRange $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
+                & $NmapExe -sV --script "http-default-accounts.nse" -p $Ports $HostRange -oX  "$($TempDir)\$($TempOutFile)" -$ScanTime > $null
             }
         }
     }
@@ -326,14 +326,11 @@ Param(
         $ServicesSorted |Export-Csv -Path $CsvFile -Delimiter ";" 
     }
     $ServicesSorted
-    #}
-    #catch {
-     #   $LineNumber = $_.Exception.InvocationInfo.ScriptLineNumber
-     #   $ExceptionInfo = $_.Exception.ToString()
-
-     #   Write-Host "Something went wrong at line $($LineNumber): $($ExceptionInfo)" -BackgroundColor Red
-    #}
-    #finally{
+    }
+    catch {
+        Write-Host "Something went wrong: " + $_.Exception.ToString() -BackgroundColor Red
+    }
+    finally{
     
         # Delete XML reports
         if($DeleteOrgXmlReports){
@@ -343,7 +340,7 @@ Param(
         else{
             Write-Host "Nmap XML reports are located in $($TempDir)"
         }
-   #}
+   }
 }
 
 Function Find-FtpServices(){
