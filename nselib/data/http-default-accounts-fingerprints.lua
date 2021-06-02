@@ -1805,4 +1805,3 @@ table.insert(fingerprints, {
 	return resp.status == 200
   end
 })
-
