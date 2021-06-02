@@ -5,8 +5,8 @@ This PowerShell module contains scripts for scanning networks for active hosts a
 Following scripts are included:
 * __Find-ActiveHosts__: Scans for active hosts on the selected networks.
 * __Find-FtpServices__: Scans for services on the selected ports. Afterwards, it checks FTP services for anonymous login.
-* __Find-HttpServices__: Scans for services in the selected ports and tests the found HTTP services for access with a list of crtedentials provided by the user (or Nmap). Per default it uses the fingerprint file included in the Nmap installation to recognize the services, but an alternative file can be provided by the user.
-* __Find-SshServices__: Scans for services on the selected networks and ports. The script checks SSH service whether it is possible to gain access with a list of credentials provided by the user (or the Nmap installation). Also, it checks the SSH server's supported algorithms for key exchange, encryption and message authentication (MAC).
+* __Find-HttpServices__: Scans for services in the selected ports and tests the found HTTP services for access with a list of credentials provided by the user (or Nmap). Per default it uses the fingerprint file included in the Nmap installation to recognize the services, but an alternative file can be provided by the user.
+* __Find-SshServices__: Scans for services on the selected networks and ports. The script looks after SSH services and checks whether it is possible to gain access with a list of credentials provided by the user (or the Nmap installation). Also, it checks the SSH server's supported algorithms for key exchange, encryption and message authentication (MAC).
 * __Find-AllServices__: This script scans both FTP, HTTP and SSH services as described above.
 
 

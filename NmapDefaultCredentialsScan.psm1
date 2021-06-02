@@ -201,11 +201,11 @@ Function GetXmlFileName(){
 Function Find-ActiveHosts(){
 # Hosts to scan
 Param(
-    [parameter(Mandatory)]
+    [Parameter(Mandatory)]
     [String[]]$HostRanges, 
     
     # Path to CSV file for scan results
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [ValidateScript({$_ -match ".+\.csv"})]
     [String]$Csv = "",
     
@@ -215,7 +215,7 @@ Param(
     [String]$ScanTime = "T3",
 
     # Delete the raw reports from the scans (located in %temp%)
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [Boolean]$DeleteOrgXmlReports = $true
     )
 
@@ -260,19 +260,20 @@ Param(
         }
     }
 }
+
 Function Find-HttpServices(){
 Param(
     # Hosts to scan
-    [parameter(Mandatory)]
+    [Parameter(Mandatory)]
     [String[]]$HostRanges, 
     
     # Path to CSV file for scan results
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [ValidateScript({$_ -match ".+\.csv"})]
     [String]$Csv = "",
     
     # fingerprint file. If none is specified the default fingerprint file will be used
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [ValidateScript({Test-Path $_})]
     [String]$Fingerprints = "",
 
@@ -282,12 +283,12 @@ Param(
     [String]$ScanTime = "T3",
 
     # TCP port range
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [ValidateScript({$_ -ne ""})]
     [String]$Ports ="80,443,631,7080,8080,8443,8088,5800,3872,8180,8000,9000,9091",
 
     # Delete the raw reports from the scans (located in %temp%)
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [Boolean]$DeleteOrgXmlReports = $true
     )
    try{ 
@@ -344,13 +345,13 @@ Param(
 }
 
 Function Find-FtpServices(){
-# Hosts to scan
 Param(
-    [parameter(Mandatory)]
+    # Hosts to scan
+    [Parameter(Mandatory)]
     [String[]]$HostRanges, 
     
     # Path to CSV file for scan results
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [ValidateScript({$_ -match ".+\.csv"})]
     [String]$Csv = "",
     
@@ -360,12 +361,12 @@ Param(
     [String]$ScanTime = "T3",
 
     # TCP port range
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [ValidateScript({$_ -ne ""})]
     [String]$Ports ="21,990,2121",
 
     # Delete the raw reports from the scans (located in %temp%)
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [Boolean]$DeleteOrgXmlReports = $true
     )
 
@@ -412,13 +413,13 @@ Param(
 }
 
 Function Find-SshServices(){
-# Hosts to scan
 Param(
-    [parameter(Mandatory)]
+    # Hosts to scan
+    [Parameter(Mandatory)]
     [String[]]$HostRanges, 
     
     # Path to CSV file for scan results
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [ValidateScript({$_ -match ".+\.csv"})]
     [String]$Csv = "",
 
@@ -437,19 +438,18 @@ Param(
     [ValidateScript({ Test-Path -Path $_ })]
     [String]$CredFile = "",
 
-
     # Nmap scan timing option. Default: T3, Most aggressive: T5, Most paranoid: T0 see https://nmap.org/book/man-performance.html for details
     [Parameter(Mandatory=$false)]
     [ValidateSet("T0", "T1", "T2", "T3", "T4", "T5")]
     [String]$ScanTime = "T3",
 
     # TCP port range
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [ValidateScript({$_ -ne ""})]
     [String]$Ports ="22,830,2222,2382,22222,55554",
 
     # Delete the raw reports from the scans (located in %temp%)
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [Boolean]$DeleteOrgXmlReports = $true
     )
 
@@ -502,14 +502,15 @@ Param(
         }
     }
 }
+
 Function Find-AllServices(){
-# Hosts to scan
 Param(
-    [parameter(Mandatory)]
+    # Hosts to scan
+    [Parameter(Mandatory)]
     [String[]]$HostRanges, 
     
     # Path to CSV file for scan results
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [ValidateScript({$_ -match ".+\.csv"})]
     [String]$Csv = "",
 
@@ -528,19 +529,18 @@ Param(
     [ValidateScript({ Test-Path -Path $_ })]
     [String]$CredFile = "",
 
-
     # Nmap scan timing option. Default: T3, Most aggressive: T5, Most paranoid: T0 see https://nmap.org/book/man-performance.html for details
     [Parameter(Mandatory=$false)]
     [ValidateSet("T0", "T1", "T2", "T3", "T4", "T5")]
     [String]$ScanTime = "T3",
 
     # TCP port range
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [ValidateScript({$_ -ne ""})]
     [String]$Ports ="0-65535",
 
     # Delete the raw reports from the scans (located in %temp%)
-    [parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
     [Boolean]$DeleteOrgXmlReports = $true
     )
 
@@ -599,6 +599,7 @@ Param(
         }
     }
 }
+
 # Exported functions
 New-Alias -Name fd-hosts -Value Find-ActiveHosts
 New-Alias -Name fd-ftp -Value Find-FtpServices
