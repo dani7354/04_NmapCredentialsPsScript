@@ -450,10 +450,7 @@ Param(
         # Folder for temporary generated XML scan reports
         $TempDir = CreateTemporaryDirectory
         foreach ($HostRange in $HostRanges) {
-            # Creating file name without dots and slash from CIDR notation 
             $TempXmlBaseName = GetXmlFileName -HostRange $HostRange
-
-            # Discover hosts, services and try out default credentials.
             $TempOutFile = "$($TempXmlBaseName)_ports$($Ports).xml"
             Write-Host "Scanning for services and testing SSH services for defaukt credentials login on host(s) $($HostRange) TCP ports $($Ports)..."
 
@@ -541,10 +538,7 @@ Param(
         # Folder for temporary generated XML scan reports
         $TempDir = CreateTemporaryDirectory
         foreach ($HostRange in $HostRanges) {
-            # Creating file name without dots and slash from CIDR notation 
             $TempXmlBaseName = GetXmlFileName -HostRange $HostRange
-
-            # Discover hosts, services and try out default credentials.
             $TempOutFile = "$($TempXmlBaseName)_ports$($Ports).xml"
             Write-Host "Scanning for services and testing SSH, FTP and HTTP services for anonymous login on host(s) $($HostRange) TCP ports $($Ports)..."
 

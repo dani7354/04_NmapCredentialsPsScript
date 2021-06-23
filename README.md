@@ -21,7 +21,7 @@ $ git clone --single-branch https://github.com/dani7354/04_NmapCredentialsPsScri
 C:\Users\<USER>\Documents\WindowsPowerShell\Modules\NmapDefaultCredentialsScan
 ```
 
-4. (Optional) Replace the following files in the Nmap install directory:
+4. (Optional) Replace the following files in the Nmap install directory (files included in this repo):
 * C:\Program Files (x86)\Nmap\nselib\data\http-default-accounts-fingerprints.lua
 * C:\Program Files (x86)\Nmap\nselib\data\shortport.lua
 
