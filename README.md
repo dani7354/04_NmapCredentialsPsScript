@@ -1,4 +1,4 @@
-# PSModule with wrapper functions for Nmap
+# PSModule with Nmap wrapper functions for testing access with default credentials
 ## About
 This PowerShell module contains scripts for scanning networks for active hosts and testing selected protocols for access with default credentials. The scans are carried out using Nmap for Windows. After the scanning is completed, the scripts will read through the scanning results from temporary XML files and print out the results as a list containing PowerShell-style objects (PSCustomObject)
 
