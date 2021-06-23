@@ -102,7 +102,7 @@ Function GetHostsFromXml(){
         {
             # Check for XML node with valid IP address
             $AddressNode = if($Host.SelectSingleNode("address[@addrtype='ipv4']")) { $Host.SelectSingleNode("address[@addrtype='ipv4']") } Else { $Host.SelectSingleNode("address[@addrtype='ipv6']")  }
-            if(!$AddressNode.addr -or $Host.status.state -ne "up"){ # TODO: check if theres a better way to check false /null 
+            if(!$AddressNode.addr -or $Host.status.state -ne "up"){ 
                     continue
             }
             $HostObj = [PSCustomObject]@{
@@ -136,7 +136,7 @@ Function GetServicesFromXml(){
             }
             # Check for XML node with valid IP address
             $AddressNode = if($Host.SelectSingleNode("address[@addrtype='ipv4']")) { $Host.SelectSingleNode("address[@addrtype='ipv4']") } Else { $Host.SelectSingleNode("address[@addrtype='ipv6']")  }
-            if(!$AddressNode.addr){ # TODO: check if theres a better way to check false /null 
+            if(!$AddressNode.addr){ 
                     continue
             }
             $Mac = if($Host.SelectSingleNode("address[@addrtype='mac']")) {  $Host.SelectSingleNode("address[@addrtype='mac']").addr } Else { "N/A" }
@@ -164,7 +164,6 @@ Function GetServicesFromXml(){
                     "ssh" { 
                         $ScriptNode =$Port.SelectSingleNode("script[@id='ssh2-enum-algos']") 
                         if($ScriptNode){
-                            #$ScriptNode =$Port.SelectSingleNode("script[@id='ssh2-enum-algos']")
                             $EncryptionAlgos = ($ScriptNode.SelectNodes("//script/table[@key='encryption_algorithms']/elem") | ForEach-Object { $_.'#text' })
                             $MacAlgos = ($ScriptNode.SelectNodes("//script/table[@key='mac_algorithms']/elem") | ForEach-Object { $_.'#text' })
                             $KeyExAlgos = ($ScriptNode.SelectNodes("//script/table[@key='kex_algorithms']/elem") | ForEach-Object { $_.'#text' })
@@ -226,10 +225,7 @@ Param(
         # Folder for temporary generated XML scan reports
         $TempDir = CreateTemporaryDirectory
         foreach ($HostRange in $HostRanges) {
-            # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
             $TempXmlBaseName = GetXmlFileName -HostRange $HostRange
-
-            # Discover hosts, services and try out default credentials.
             $TempOutFile = "$($TempXmlBaseName).xml"
             Write-Host "Scanning for hosts $($HostRange)..."
 
@@ -299,10 +295,7 @@ Param(
     $TempDir = CreateTemporaryDirectory
 
     foreach ($HostRange in $HostRanges) {
-        # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
         $TempXmlBaseName = GetXmlFileName -HostRange $HostRange
-
-        # Discover hosts, services and try out default credentials.
         if($Ports -ne ""){
             $TempOutFile = "$($TempXmlBaseName)_ports$($Ports).xml"
             Write-Host "Performing scan and default credentials check on host(s) $($HostRange) TCP ports $($Ports)"
@@ -377,10 +370,7 @@ Param(
         # Folder for temporary generated XML scan reports
         $TempDir = CreateTemporaryDirectory
         foreach ($HostRange in $HostRanges) {
-            # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
             $TempXmlBaseName = GetXmlFileName -HostRange $HostRange
-
-            # Discover hosts, services and try out default credentials.
             $TempOutFile = "$($TempXmlBaseName)_ports$($Ports).xml"
             Write-Host "Scanning for services and testing FTP services for anonymous login on host(s) $($HostRange) TCP ports $($Ports)..."
 
@@ -460,7 +450,7 @@ Param(
         # Folder for temporary generated XML scan reports
         $TempDir = CreateTemporaryDirectory
         foreach ($HostRange in $HostRanges) {
-            # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
+            # Creating file name without dots and slash from CIDR notation 
             $TempXmlBaseName = GetXmlFileName -HostRange $HostRange
 
             # Discover hosts, services and try out default credentials.
@@ -551,7 +541,7 @@ Param(
         # Folder for temporary generated XML scan reports
         $TempDir = CreateTemporaryDirectory
         foreach ($HostRange in $HostRanges) {
-            # Creating file name without dots and slash from CIDR notation - TODO: use a regular expression
+            # Creating file name without dots and slash from CIDR notation 
             $TempXmlBaseName = GetXmlFileName -HostRange $HostRange
 
             # Discover hosts, services and try out default credentials.
